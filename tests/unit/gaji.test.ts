@@ -9,6 +9,7 @@ function buatInput(ubah: Partial<InputGaji> = {}): InputGaji {
       namaLengkap: "Budi Santoso",
       jabatan: "Staf Gudang",
       cabang: "Surabaya",
+      nomorRekening: "0012345678",
       gajiPokok: 4_000_000,
       tunjangan: 500_000,
     },

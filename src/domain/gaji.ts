@@ -21,6 +21,7 @@ export interface InputGaji {
     namaLengkap: string;
     jabatan: string;
     cabang: string;
+    nomorRekening: string;
     gajiPokok: number;
     tunjangan: number;
   };
@@ -44,6 +45,8 @@ export interface RincianGaji {
   namaLengkap: string;
   jabatan: string;
   cabang: string;
+  /** Rekening yang berlaku saat gaji dihitung. Ikut tersimpan pada snapshot. */
+  nomorRekening: string;
   absensi: AbsensiUntukGaji;
   gajiPokok: number;
   tunjangan: number;
@@ -135,6 +138,7 @@ export function hitungGaji(input: InputGaji): RincianGaji {
     namaLengkap: karyawan.namaLengkap,
     jabatan: karyawan.jabatan,
     cabang: karyawan.cabang,
+    nomorRekening: karyawan.nomorRekening,
     absensi: { ...input.absensi },
     gajiPokok: karyawan.gajiPokok,
     tunjangan: karyawan.tunjangan,

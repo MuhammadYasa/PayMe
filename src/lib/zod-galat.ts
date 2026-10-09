@@ -8,7 +8,8 @@ export function ringkasGalatZod(galat: Pick<ZodError, "issues">): { pesan: strin
     if (!(kunci in kolom)) kolom[kunci] = isu.message;
   }
   const daftar = Object.values(kolom);
+  // Beberapa kolom dengan pesan yang sama (mis. nama dan rekening sama-sama kosong) cukup dilaporkan sekali.
   const pesan =
-    daftar.length === 1 ? daftar[0] : `Ada ${daftar.length} isian yang belum benar. Periksa kolom yang ditandai, lalu coba lagi.`;
+    new Set(daftar).size === 1 ? daftar[0] : `Ada ${daftar.length} isian yang belum benar. Periksa kolom yang ditandai, lalu coba lagi.`;
   return { pesan, kolom };
 }
