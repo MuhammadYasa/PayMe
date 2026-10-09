@@ -21,6 +21,8 @@ export interface BarisSales {
 export interface DataCabang {
   cabang: string;
   totalAktual: number;
+  /** Cabang ini sudah pernah disimpan. Membedakan total Rp 0 yang tersimpan dari cabang yang belum diisi. */
+  sudahDisimpan: boolean;
   adaBreakdown: boolean;
   /** Total cabang dikurangi jumlah breakdown. Positif berarti breakdown kurang dari total. */
   selisih: number;
@@ -82,6 +84,7 @@ export async function ambilPendapatan(db: DbPerusahaan, periodeId: string) {
     return {
       cabang: nama,
       totalAktual,
+      sudahDisimpan: baris !== undefined || sales.length > 0,
       adaBreakdown: sales.length > 0,
       selisih: totalAktual - jumlahSales,
       selisihDiakui: baris?.selisihDiakui ?? false,

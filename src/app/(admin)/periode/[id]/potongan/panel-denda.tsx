@@ -136,6 +136,8 @@ export function PanelDenda({ periodeId, final }: { periodeId: string; final: boo
     } finally {
       setMenghapus(false);
       setHapus(null);
+      // Tombol Hapus yang memicu dialog sudah hilang dari tabel, jadi fokus dipindahkan ke formulir denda di atasnya.
+      setTimeout(() => form.current?.querySelector("select")?.focus(), 50);
     }
   }
 

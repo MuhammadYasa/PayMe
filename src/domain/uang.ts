@@ -49,6 +49,21 @@ export function parseNominal(masukan: string): number | null {
   return negatif && nilai !== 0 ? -nilai : nilai;
 }
 
+/**
+ * Membaca nominal yang ditempel dari Excel atau dokumen lain. Berbeda dari parseNominal, bagian sen di ujung
+ * ("2.500.000,00", "2500000.50") dibuang alih-alih dianggap digit biasa, sehingga tidak berubah menjadi seratus kali
+ * lipat. Pemisah diikuti satu atau dua digit di ujung tidak mungkin kelompok ribuan, jadi pasti pecahan.
+ * Mengembalikan null untuk teks kosong, bernilai negatif, atau formatnya tidak dikenali.
+ */
+export function parseNominalTempel(masukan: string): number | null {
+  const teks = masukan
+    .trim()
+    .replace(/^rp\.?\s*/i, "")
+    .replace(/\s+/g, "");
+  if (teks === "" || teks.startsWith("-")) return null;
+  return parseNominal(teks.replace(/[.,]\d{1,2}$/, ""));
+}
+
 /** Persentase per mil (1000 = 100,0%) ditampilkan dengan satu desimal, mis. 853 menjadi "85,3%". */
 export function formatPersenPermil(permil: number): string {
   const sisa = Math.abs(permil) % 10;

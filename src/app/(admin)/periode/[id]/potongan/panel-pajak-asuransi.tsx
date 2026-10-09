@@ -23,16 +23,17 @@ interface Nilai {
   pajak: number | null;
   asuransi: number | null;
 }
-type Peta = Record<string, Nilai>;
+
+/** Hanya karyawan yang diubah pengguna di layar ini. Karyawan lain selalu mengikuti data terbaru dari server. */
+type Ubahan = Record<string, Nilai>;
 
 const dariBaris = (k: BarisPotonganLain): Nilai => ({ pajak: k.pajak || null, asuransi: k.asuransi || null });
-const buatPeta = (karyawan: BarisPotonganLain[]): Peta => Object.fromEntries(karyawan.map((k) => [k.karyawanId, dariBaris(k)]));
-const potret = (peta: Peta) => JSON.stringify(Object.entries(peta));
+const tandai = (nilai: Nilai) => JSON.stringify([nilai.pajak, nilai.asuransi]);
 
 export function PanelPajakAsuransi({ periodeId, final }: { periodeId: string; final: boolean }) {
   const potongan = useData<DataPotongan>(`/api/periode/${periodeId}/potongan`);
 
-  if (potongan.galat) {
+  if (potongan.galat && !potongan.data) {
     return (
       <Pesan jenis="galat" judul="Data pajak dan asuransi belum bisa dimuat" aksi={<Tombol ukuran="kecil" varian="sekunder" onClick={potongan.muatUlang}>Coba lagi</Tombol>}>
         {potongan.galat.message}
@@ -49,36 +50,62 @@ export function PanelPajakAsuransi({ periodeId, final }: { periodeId: string; fi
       />
     );
   }
-  return <TabelPotongan periodeId={periodeId} karyawan={potongan.data.karyawan} final={final} onTersimpan={potongan.muatUlang} />;
+  return (
+    <TabelPotongan
+      periodeId={periodeId}
+      karyawan={potongan.data.karyawan}
+      final={final}
+      galatMuat={potongan.galat?.message ?? null}
+      muatUlang={potongan.muatUlang}
+    />
+  );
 }
 
-function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId: string; karyawan: BarisPotonganLain[]; final: boolean; onTersimpan: () => void }) {
-  const [peta, setPeta] = useState<Peta>(() => buatPeta(karyawan));
-  const [tersimpan, setTersimpan] = useState(() => potret(buatPeta(karyawan)));
+function TabelPotongan({
+  periodeId,
+  karyawan,
+  final,
+  galatMuat,
+  muatUlang,
+}: {
+  periodeId: string;
+  karyawan: BarisPotonganLain[];
+  final: boolean;
+  galatMuat: string | null;
+  muatUlang: () => void;
+}) {
+  const [ubahan, setUbahan] = useState<Ubahan>({});
+  /** Potret terakhir yang berhasil disimpan dari layar ini, per karyawan. Pembanding untuk menentukan baris yang berubah. */
+  const [dasar, setDasar] = useState<Record<string, string>>({});
   const [kabar, setKabar] = useState<{ jenis: JenisPesan; judul: string; teks: string } | null>(null);
   const [memproses, setMemproses] = useState(false);
   const [menyalin, setMenyalin] = useState(false);
 
-  const belumTersimpan = potret(peta) !== tersimpan;
+  const tampil = (k: BarisPotonganLain): Nilai => ubahan[k.karyawanId] ?? dariBaris(k);
+  const pembanding = (k: BarisPotonganLain) => dasar[k.karyawanId] ?? tandai(dariBaris(k));
+  const berubah = karyawan.filter((k) => k.karyawanId in ubahan && tandai(ubahan[k.karyawanId]) !== pembanding(k));
+  const belumTersimpan = berubah.length > 0;
   useCegahKehilangan(belumTersimpan);
 
-  function ubah(id: string, perubahan: Partial<Nilai>) {
+  function ubah(k: BarisPotonganLain, perubahan: Partial<Nilai>) {
     setKabar(null);
-    setPeta((l) => ({ ...l, [id]: { ...l[id], ...perubahan } }));
+    setUbahan((l) => ({ ...l, [k.karyawanId]: { ...(l[k.karyawanId] ?? dariBaris(k)), ...perubahan } }));
   }
 
   async function simpan() {
+    if (!belumTersimpan) return;
     setKabar(null);
     setMemproses(true);
-    const potretKirim = potret(peta);
+    // Hanya karyawan yang diubah yang dikirim, supaya penyimpanan tidak menimpa isian orang lain pada karyawan lain.
+    const terkirim = berubah.map((k) => [k.karyawanId, ubahan[k.karyawanId]] as const);
     try {
       await api(`/api/periode/${periodeId}/potongan`, {
         metode: "PUT",
-        body: { items: karyawan.map((k) => ({ karyawanId: k.karyawanId, pajak: peta[k.karyawanId].pajak, asuransi: peta[k.karyawanId].asuransi })) },
+        body: { items: terkirim.map(([karyawanId, nilai]) => ({ karyawanId, pajak: nilai.pajak, asuransi: nilai.asuransi })) },
       });
-      setTersimpan(potretKirim);
+      setDasar((l) => ({ ...l, ...Object.fromEntries(terkirim.map(([id, nilai]) => [id, tandai(nilai)])) }));
       setKabar({ jenis: "sukses", judul: "Tersimpan", teks: "Pajak dan asuransi tersimpan. Baris tanpa nominal tidak disimpan." });
-      onTersimpan();
+      muatUlang();
     } catch (g) {
       setKabar({ jenis: "galat", judul: "Belum bisa disimpan", teks: g instanceof GalatApi ? g.message : "Gagal menyimpan. Coba lagi." });
     } finally {
@@ -97,7 +124,14 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
         return;
       }
       const sumber = new Map(hasil.karyawan.map((k) => [k.karyawanId, k]));
-      setPeta((l) => Object.fromEntries(Object.entries(l).map(([id, nilai]) => [id, sumber.has(id) ? dariBaris(sumber.get(id)!) : nilai])));
+      setUbahan((l) => {
+        const baru = { ...l };
+        for (const k of karyawan) {
+          const dari = sumber.get(k.karyawanId);
+          if (dari) baru[k.karyawanId] = dariBaris(dari);
+        }
+        return baru;
+      });
       setKabar({
         jenis: "sukses",
         judul: "Nominal disalin",
@@ -110,8 +144,8 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
     }
   }
 
-  const totalPajak = karyawan.reduce((total, k) => total + (peta[k.karyawanId].pajak ?? 0), 0);
-  const totalAsuransi = karyawan.reduce((total, k) => total + (peta[k.karyawanId].asuransi ?? 0), 0);
+  const totalPajak = karyawan.reduce((total, k) => total + (tampil(k).pajak ?? 0), 0);
+  const totalAsuransi = karyawan.reduce((total, k) => total + (tampil(k).asuransi ?? 0), 0);
 
   return (
     <Kartu
@@ -134,6 +168,19 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
             Nominal tidak dapat diubah lagi. Buka kembali periode di langkah Hitung Gaji bila perlu koreksi.
           </Pesan>
         ) : null}
+        {galatMuat ? (
+          <Pesan
+            jenis="peringatan"
+            judul="Data terbaru belum bisa dimuat"
+            aksi={
+              <Tombol ukuran="kecil" varian="sekunder" onClick={muatUlang}>
+                Coba lagi
+              </Tombol>
+            }
+          >
+            {galatMuat} Isian Anda di halaman ini tetap aman dan belum hilang.
+          </Pesan>
+        ) : null}
         {kabar ? (
           <Pesan jenis={kabar.jenis} judul={kabar.judul}>
             {kabar.teks}
@@ -151,7 +198,7 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
           </KepalaTabel>
           <tbody>
             {karyawan.map((k) => {
-              const nilai = peta[k.karyawanId];
+              const nilai = tampil(k);
               return (
                 <Baris key={k.karyawanId}>
                   <Td>
@@ -160,12 +207,12 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
                   </Td>
                   <Td>
                     <div className="flex justify-end">
-                      <SelNominal label={`Pajak ${k.nama}`} nilai={nilai.pajak} disabled={final} onUbah={(v) => ubah(k.karyawanId, { pajak: v })} />
+                      <SelNominal label={`Pajak ${k.nama}`} nilai={nilai.pajak} disabled={final} onUbah={(v) => ubah(k, { pajak: v })} />
                     </div>
                   </Td>
                   <Td>
                     <div className="flex justify-end">
-                      <SelNominal label={`Asuransi ${k.nama}`} nilai={nilai.asuransi} disabled={final} onUbah={(v) => ubah(k.karyawanId, { asuransi: v })} />
+                      <SelNominal label={`Asuransi ${k.nama}`} nilai={nilai.asuransi} disabled={final} onUbah={(v) => ubah(k, { asuransi: v })} />
                     </div>
                   </Td>
                   <TdAngka>{formatRupiah((nilai.pajak ?? 0) + (nilai.asuransi ?? 0))}</TdAngka>
@@ -187,7 +234,7 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
 
         {!final ? (
           <div className="flex justify-end">
-            <Tombol memuat={memproses} onClick={() => void simpan()}>
+            <Tombol memuat={memproses} disabled={!belumTersimpan} onClick={() => void simpan()}>
               Simpan pajak dan asuransi
             </Tombol>
           </div>

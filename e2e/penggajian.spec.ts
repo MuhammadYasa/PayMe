@@ -134,6 +134,9 @@ test("alur lengkap penggajian: dari pendaftaran sampai karyawan melihat gajinya"
     const surabaya = kartu("Surabaya");
     await surabaya.getByLabel("Total pendapatan aktual cabang").fill("12000000");
     await surabaya.getByLabel("Tambah sales").selectOption({ label: "Budi Santoso" });
+    // Memilih saja belum menambah baris, supaya panah pada pilihan tidak menambah karyawan tanpa disengaja.
+    await expect(surabaya.getByLabel("Pendapatan Budi Santoso")).toHaveCount(0);
+    await surabaya.getByRole("button", { name: "Tambahkan yang dipilih" }).click();
     await surabaya.getByLabel("Pendapatan Budi Santoso").fill("9000000");
     await surabaya.getByLabel("Target Budi Santoso").fill("10000000");
     await expect(surabaya.getByText("Selisih Rp 3.000.000")).toBeVisible();
@@ -158,7 +161,22 @@ test("alur lengkap penggajian: dari pendaftaran sampai karyawan melihat gajinya"
   await test.step("langkah 6: dua baris insentif untuk satu karyawan", async () => {
     await page.goto(`/periode/${periodeId}/insentif`);
     await page.getByLabel("Jenis insentif Budi Santoso baris 1").fill("Pengiriman");
-    await page.getByLabel("Nominal insentif Budi Santoso baris 1").fill("200000");
+    // Menempel dari Excel: "2.500.000,00" terbaca Rp 2.500.000 (bukan 250.000.000), dan teks negatif diabaikan.
+    // Event tempel sintetis di Firefox tidak membawa isi papan klip, jadi pemeriksaan ini hanya berjalan di Chromium.
+    const nominalBaris1 = page.getByLabel("Nominal insentif Budi Santoso baris 1");
+    if (browserName === "chromium") {
+      const tempel = (teks: string) =>
+        nominalBaris1.evaluate((el, isi) => {
+          const data = new DataTransfer();
+          data.setData("text/plain", isi);
+          el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+        }, teks);
+      await tempel("2.500.000,00");
+      await expect(nominalBaris1).toHaveValue("2.500.000");
+      await tempel("-9.000");
+      await expect(nominalBaris1).toHaveValue("2.500.000");
+    }
+    await nominalBaris1.fill("200000");
     await page.getByRole("button", { name: /Tambah baris untuk Budi Santoso/ }).click();
     await page.getByLabel("Jenis insentif Budi Santoso baris 2").fill("Lembur");
     await page.getByLabel("Nominal insentif Budi Santoso baris 2").fill("150000");
@@ -306,6 +324,13 @@ test("halaman karyawan tampil dan memindahkan fokus ke kolom yang kosong", async
   await expect(page.getByLabel("Nama lengkap")).toBeFocused();
   await expect(page.getByText("Isi nama lengkap Anda, sesuai data di perusahaan.")).toBeVisible();
   await expect(page.getByText("Isi nomor rekening Anda.")).toBeVisible();
+
+  // Rekening bertanda hubung ditolak di formulir dan tidak dikirim, jadi tidak menghabiskan jatah percobaan.
+  await page.getByLabel("Nama lengkap").fill("Budi Santoso");
+  await page.getByLabel("Nomor rekening").fill("123-456-7890");
+  await page.getByRole("button", { name: "Lihat Gaji Saya" }).click();
+  await expect(page.getByText("Nomor rekening hanya berisi angka. Hapus tanda hubung atau huruf, lalu coba lagi.")).toBeVisible();
+  await expect(page.getByLabel("Nomor rekening")).toBeFocused();
 });
 
 test("halaman karyawan memblokir setelah lima kali gagal berturut-turut", async ({ page, browserName }) => {

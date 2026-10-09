@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { TabelRincian } from "@/components/gaji/tabel-rincian";
 import { Kartu } from "@/components/ui/kartu";
 import { KolomInput } from "@/components/ui/kolom";
@@ -19,6 +19,15 @@ export function FormLihatGaji() {
   const [pesan, setPesan] = useState<string | null>(null);
   const [memproses, setMemproses] = useState(false);
   const [hasil, setHasil] = useState<GajiPublik | null>(null);
+  const kembaliKeForm = useRef(false);
+
+  // Setelah "Selesai", formulir muncul lagi dan fokus kembali ke kolom pertama, bukan hilang ke badan halaman.
+  useEffect(() => {
+    if (hasil === null && kembaliKeForm.current) {
+      kembaliKeForm.current = false;
+      form.current?.querySelector("input")?.focus();
+    }
+  }, [hasil]);
 
   async function kirim(e: FormEvent) {
     e.preventDefault();
@@ -27,6 +36,8 @@ export function FormLihatGaji() {
     const k: Record<string, string> = {};
     if (!nama.trim()) k.nama = "Isi nama lengkap Anda, sesuai data di perusahaan.";
     if (!rekening.trim()) k.rekening = "Isi nomor rekening Anda.";
+    // Salah ketik format (mis. tanda hubung) dicegah di sini, supaya tidak dihitung sebagai percobaan gagal yang bisa memblokir.
+    else if (!/^\d+$/.test(rekening.replace(/\s+/g, ""))) k.rekening = "Nomor rekening hanya berisi angka. Hapus tanda hubung atau huruf, lalu coba lagi.";
     setKolom(k);
     if (Object.keys(k).length > 0) {
       fokusKolomPertama(form.current, k);
@@ -46,7 +57,17 @@ export function FormLihatGaji() {
     }
   }
 
-  if (hasil) return <HasilGaji data={hasil} onSelesai={() => setHasil(null)} />;
+  if (hasil) {
+    return (
+      <HasilGaji
+        data={hasil}
+        onSelesai={() => {
+          kembaliKeForm.current = true;
+          setHasil(null);
+        }}
+      />
+    );
+  }
 
   return (
     <Kartu judul="Data Anda" deskripsi="Nama dan nomor rekening harus sama persis dengan yang terdaftar di perusahaan.">
@@ -82,8 +103,15 @@ export function FormLihatGaji() {
 }
 
 function HasilGaji({ data, onSelesai }: { data: GajiPublik; onSelesai: () => void }) {
+  const wadah = useRef<HTMLDivElement>(null);
+
+  // Formulir menghilang saat hasil muncul, jadi fokus dipindahkan ke hasil agar pembaca layar langsung mendengarnya.
+  useEffect(() => {
+    wadah.current?.focus();
+  }, []);
+
   return (
-    <div className="space-y-5">
+    <div ref={wadah} tabIndex={-1} role="region" aria-label={`Gaji ${data.nama}`} className="space-y-5 outline-none">
       <Kartu
         judul={data.nama}
         deskripsi={`${data.jabatan}, cabang ${data.cabang}, ${data.perusahaan}`}

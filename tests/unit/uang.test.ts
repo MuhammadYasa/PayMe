@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { formatPersenPermil, formatRupiah, parseNominal } from "@/domain/uang";
+import { formatPersenPermil, formatRupiah, parseNominal, parseNominalTempel } from "@/domain/uang";
+
+describe("parseNominalTempel", () => {
+  it("membuang sen di ujung alih-alih menjadikannya digit (tidak berubah seratus kali lipat)", () => {
+    expect(parseNominalTempel("2.500.000,00")).toBe(2_500_000);
+    expect(parseNominalTempel("2500000.00")).toBe(2_500_000);
+    expect(parseNominalTempel("2,500,000.50")).toBe(2_500_000);
+    expect(parseNominalTempel("Rp 5.000.000,00")).toBe(5_000_000);
+  });
+
+  it("tetap membaca format tanpa sen seperti parseNominal", () => {
+    expect(parseNominalTempel("1250000")).toBe(1_250_000);
+    expect(parseNominalTempel("1.250.000")).toBe(1_250_000);
+    expect(parseNominalTempel("12.500")).toBe(12_500);
+    expect(parseNominalTempel("  Rp. 750.000 ")).toBe(750_000);
+    expect(parseNominalTempel("0")).toBe(0);
+  });
+
+  it("menolak negatif, kosong, dan teks yang bukan nominal", () => {
+    expect(parseNominalTempel("-5.000")).toBeNull();
+    expect(parseNominalTempel("   ")).toBeNull();
+    expect(parseNominalTempel("abc")).toBeNull();
+    expect(parseNominalTempel("12abc")).toBeNull();
+  });
+});
 
 describe("formatRupiah", () => {
   it("menampilkan pemisah ribuan titik dengan awalan Rp", () => {

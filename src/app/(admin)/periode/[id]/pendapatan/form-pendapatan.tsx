@@ -33,7 +33,7 @@ interface IsianCabang {
 }
 
 function isianAwal(c: DataCabang): IsianCabang {
-  const sudahAda = c.adaBreakdown || c.totalAktual > 0;
+  const sudahAda = c.sudahDisimpan;
   return {
     total: sudahAda ? c.totalAktual : null,
     sales: c.sales.map((s) => ({ karyawanId: s.karyawanId, nominal: s.nominal, target: s.target })),
@@ -46,7 +46,7 @@ export function FormPendapatan({ periodeId, final }: { periodeId: string; final:
   const pengaturan = useData<Pengaturan>("/api/pengaturan");
 
   const galat = pendapatan.galat ?? pengaturan.galat;
-  if (galat) {
+  if (galat && (!pendapatan.data || !pengaturan.data)) {
     return (
       <Pesan
         jenis="galat"
@@ -87,6 +87,26 @@ export function FormPendapatan({ periodeId, final }: { periodeId: string; final:
           Pendapatan tidak dapat diubah lagi. Buka kembali periode di langkah Hitung Gaji bila perlu koreksi.
         </Pesan>
       ) : null}
+      {galat ? (
+        <Pesan
+          jenis="peringatan"
+          judul="Data terbaru belum bisa dimuat"
+          aksi={
+            <Tombol
+              ukuran="kecil"
+              varian="sekunder"
+              onClick={() => {
+                pendapatan.muatUlang();
+                pengaturan.muatUlang();
+              }}
+            >
+              Coba lagi
+            </Tombol>
+          }
+        >
+          {galat.message} Isian Anda di halaman ini tetap aman dan belum hilang.
+        </Pesan>
+      ) : null}
       {pendapatan.data.cabang.map((c) => (
         <KartuCabang key={c.cabang} periodeId={periodeId} data={c} tingkat={pengaturan.data!.tingkatBonus} final={final} onTersimpan={pendapatan.muatUlang} />
       ))}
@@ -114,17 +134,25 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
   const [pesan, setPesan] = useState<string | null>(null);
   const [kabar, setKabar] = useState<{ jenis: "sukses" | "peringatan"; teks: string } | null>(null);
   const [memproses, setMemproses] = useState(false);
+  const [pilihan, setPilihan] = useState("");
 
   /** Mengubah angka membatalkan pengakuan selisih, karena pengakuan hanya berlaku untuk selisih yang sedang terlihat. */
   function ubahAngka(ubah: (lama: IsianCabang) => IsianCabang) {
     setIsian((lama) => ({ ...ubah(lama), akui: false }));
     setKabar(null);
+    // Galat lama menunjuk isian sebelum diperbaiki, jadi dibersihkan begitu pengguna mengubah angka.
+    setKolom({});
+    setPesan(null);
   }
   const ubahBaris = (id: string, perubahan: Partial<BarisSalesIsian>) =>
     ubahAngka((l) => ({ ...l, sales: l.sales.map((s) => (s.karyawanId === id ? { ...s, ...perubahan } : s)) }));
   const tambah = (ids: string[]) =>
     ubahAngka((l) => ({ ...l, sales: [...l.sales, ...ids.map((id) => ({ karyawanId: id, nominal: null, target: null }))] }));
-  const hapus = (id: string) => ubahAngka((l) => ({ ...l, sales: l.sales.filter((s) => s.karyawanId !== id) }));
+  function hapus(id: string) {
+    ubahAngka((l) => ({ ...l, sales: l.sales.filter((s) => s.karyawanId !== id) }));
+    // Tombol Hapus yang baru ditekan ikut hilang, jadi fokus dipindahkan ke pilihan "Tambah sales" pada kartu yang sama.
+    setTimeout(() => form.current?.querySelector("select")?.focus(), 0);
+  }
 
   const dipakai = new Set(isian.sales.map((s) => s.karyawanId));
   const tersedia = [...nama.entries()].filter(([id]) => !dipakai.has(id)).sort((a, b) => a[1].localeCompare(b[1], "id"));
@@ -135,7 +163,7 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
   const perluAkui = isian.sales.length > 0 && isian.total !== null && selisih !== 0;
   const belumTersimpan = JSON.stringify(isian) !== tersimpan;
   useCegahKehilangan(belumTersimpan);
-  const sudahAda = data.adaBreakdown || data.totalAktual > 0;
+  const sudahAda = data.sudahDisimpan;
 
   async function simpan(e: FormEvent) {
     e.preventDefault();
@@ -197,7 +225,7 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
       }
     >
       <form ref={form} onSubmit={(e) => void simpan(e)} noValidate className="space-y-4">
-        <RingkasanGalat pesan={pesan} />
+        <RingkasanGalat pesan={pesan} kolom={Object.keys(kolom).length > 1 ? kolom : undefined} />
         {kabar ? (
           <Pesan jenis={kabar.jenis} judul={kabar.jenis === "sukses" ? "Tersimpan" : "Tersimpan dengan catatan"}>
             {kabar.teks}
@@ -307,10 +335,8 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
           <div className="flex flex-wrap items-end gap-3">
             <KolomPilih
               label="Tambah sales"
-              value=""
-              onChange={(e) => {
-                if (e.target.value) tambah([e.target.value]);
-              }}
+              value={pilihan}
+              onChange={(e) => setPilihan(e.target.value)}
               disabled={tersedia.length === 0}
               className="min-w-64"
             >
@@ -321,6 +347,17 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
                 </option>
               ))}
             </KolomPilih>
+            {/* Memilih saja tidak menambah baris: panah atas dan bawah pada pilihan akan menambah karyawan tanpa disengaja. */}
+            <Tombol
+              varian="sekunder"
+              disabled={pilihan === ""}
+              onClick={() => {
+                tambah([pilihan]);
+                setPilihan("");
+              }}
+            >
+              Tambahkan yang dipilih
+            </Tombol>
             <Tombol varian="sekunder" disabled={tersedia.length === 0} onClick={() => tambah(tersedia.map(([id]) => id))}>
               Tambahkan semua karyawan cabang
             </Tombol>

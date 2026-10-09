@@ -27,7 +27,12 @@ export function useData<T>(url: string | null) {
       })
       .catch((galat: unknown) => {
         if (batal) return;
-        setHasil({ kunci, galat: galat instanceof GalatApi ? galat : new GalatApi(0, "Data tidak dapat dimuat. Coba lagi.") });
+        // Data lama dipertahankan, supaya muat ulang yang gagal tidak membuang formulir beserta isian yang belum tersimpan.
+        setHasil((lama) => ({
+          kunci,
+          data: lama?.data,
+          galat: galat instanceof GalatApi ? galat : new GalatApi(0, "Data tidak dapat dimuat. Coba lagi."),
+        }));
       });
     return () => {
       batal = true;

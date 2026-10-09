@@ -1,7 +1,7 @@
 "use client";
 
-import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, useId } from "react";
-import { formatAngka } from "@/domain/uang";
+import { type ClipboardEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, useId } from "react";
+import { formatAngka, parseNominalTempel } from "@/domain/uang";
 
 const gayaDasar =
   "block w-full rounded-lg border border-garis-tebal bg-kartu px-3 min-h-11 text-[15px] text-teks " +
@@ -155,10 +155,8 @@ export function KolomNominal({ label, galat, bantuan, wajib, className, nilai, o
             autoComplete="off"
             placeholder={placeholder ?? "0"}
             value={nilai === null ? "" : formatAngka(nilai)}
-            onChange={(e) => {
-              const digit = e.target.value.replace(/\D/g, "").slice(0, 15);
-              onUbah(digit === "" ? null : Number(digit));
-            }}
+            onChange={(e) => onUbah(bacaDigit(e.target.value))}
+            onPaste={(e) => tempelNominal(e, onUbah)}
             className={`${gayaDasar} pl-10 text-right tabular-nums`}
           />
         </div>
@@ -167,9 +165,22 @@ export function KolomNominal({ label, galat, bantuan, wajib, className, nilai, o
   );
 }
 
+const BATAS_NOMINAL_ISIAN = 999_999_999_999_999;
+
 function bacaDigit(teks: string): number | null {
   const digit = teks.replace(/\D/g, "").slice(0, 15);
   return digit === "" ? null : Number(digit);
+}
+
+/**
+ * Menempel nominal dari Excel: "2.500.000,00" terbaca 2500000, bukan 250000000. Hanya jalur tempel yang membuang sen;
+ * mengetik atau menghapus digit tetap lewat bacaDigit supaya backspace pada "1.250" menghasilkan 125. Teks yang tidak
+ * dikenali atau bernilai negatif diabaikan, dan isian yang ada tidak berubah.
+ */
+function tempelNominal(e: ClipboardEvent<HTMLInputElement>, onUbah: (nilai: number | null) => void): void {
+  e.preventDefault();
+  const nilai = parseNominalTempel(e.clipboardData.getData("text"));
+  if (nilai !== null && nilai <= BATAS_NOMINAL_ISIAN) onUbah(nilai);
 }
 
 /** Isian rupiah untuk sel tabel. Labelnya hanya untuk pembaca layar karena judul kolom sudah terlihat. */
@@ -199,6 +210,7 @@ export function SelNominal({
       placeholder="0"
       value={nilai === null ? "" : formatAngka(nilai)}
       onChange={(e) => onUbah(bacaDigit(e.target.value))}
+      onPaste={(e) => tempelNominal(e, onUbah)}
       className={`${gayaDasar} min-w-36 text-right tabular-nums`}
     />
   );
