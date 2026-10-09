@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/*
+  Palet biru-putih. Setiap pasangan teks dan latar yang dipakai komponen diuji pada
+  tests/unit/kontras.test.ts agar rasio kontrasnya minimal 4,5:1.
+*/
+@theme {
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  --color-halaman: #f4f7fb;
+  --color-kartu: #ffffff;
+  --color-teks: #0f172a;
+  --color-teks-redup: #475569;
+  --color-placeholder: #64748b;
+  --color-garis: #cbd5e1;
+  --color-garis-tebal: #94a3b8;
+
+  --color-merek: #1d4ed8;
+  --color-merek-gelap: #1e40af;
+  --color-merek-lembut: #eff6ff;
+  --color-merek-garis: #bfdbfe;
+  --color-fokus: #2563eb;
+
+  --color-sukses-latar: #dcfce7;
+  --color-sukses-teks: #14532d;
+  --color-peringatan-latar: #fef9c3;
+  --color-peringatan-teks: #713f12;
+  --color-bahaya: #b91c1c;
+  --color-bahaya-gelap: #991b1b;
+  --color-bahaya-latar: #fee2e2;
+  --color-bahaya-teks: #7f1d1d;
+  --color-info-latar: #dbeafe;
+  --color-info-teks: #1e3a8a;
+  --color-netral-latar: #e2e8f0;
+  --color-netral-teks: #1e293b;
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-halaman);
+    color: var(--color-teks);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-fokus);
+    outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: var(--color-placeholder);
+    opacity: 1;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--color-teks);
+    line-height: 1.25;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

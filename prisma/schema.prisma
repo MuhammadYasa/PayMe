@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StatusPeriode {
+  DRAF
+  FINAL
+
+  @@map("status_periode")
+}
+
+enum StatusAbsensi {
+  HADIR
+  IZIN
+  SAKIT
+  CUTI
+  LIBUR
+  LAINNYA
+
+  @@map("status_absensi")
+}
+
+enum SumberAbsensi {
+  MESIN
+  MANUAL
+
+  @@map("sumber_absensi")
+}
+
+enum JenisPotonganLain {
+  PAJAK
+  ASURANSI
+
+  @@map("jenis_potongan_lain")
+}
+
+model Perusahaan {
+  id         String   @id @default(uuid()) @db.Uuid
+  nama       String   @db.VarChar(150)
+  dibuatPada DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  akun             Akun[]
+  pengaturan       PengaturanPerusahaan?
+  karyawan         Karyawan[]
+  alias            KaryawanAlias[]
+  periode          Periode[]
+  absensi          Absensi[]
+  pendapatanCabang PendapatanCabang[]
+  pendapatanSales  PendapatanSales[]
+  insentif         Insentif[]
+  denda            Denda[]
+  potonganDenda    PotonganDenda[]
+  potonganLain     PotonganLain[]
+  hasilGaji        HasilGaji[]
+
+  @@map("perusahaan")
+}
+
+model Akun {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @map("password_hash")
+  nama         String   @db.VarChar(100)
+  perusahaanId String   @map("perusahaan_id") @db.Uuid
+  dibuatPada   DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  sesi       Sesi[]
+
+  @@index([perusahaanId])
+  @@map("akun")
+}
+
+model Sesi {
+  id              String   @id @default(uuid()) @db.Uuid
+  akunId          String   @map("akun_id") @db.Uuid
+  tokenHash       String   @unique @map("token_hash") @db.VarChar(64)
+  dibuatPada      DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+  kedaluwarsaPada DateTime @map("kedaluwarsa_pada") @db.Timestamptz(3)
+
+  akun Akun @relation(fields: [akunId], references: [id], onDelete: Cascade)
+
+  @@index([akunId])
+  @@index([kedaluwarsaPada])
+  @@map("sesi")
+}
+
+// Pengaturan yang bersifat asumsi (hari kerja, potongan absensi, tingkat bonus)
+// disimpan per perusahaan agar bisa diubah tanpa mengubah kode.
+model PengaturanPerusahaan {
+  id                String   @id @default(uuid()) @db.Uuid
+  perusahaanId      String   @unique @map("perusahaan_id") @db.Uuid
+  hariKerjaMingguan Int[]    @default([1, 2, 3, 4, 5, 6]) @map("hari_kerja_mingguan")
+  aturanPotongan    Json     @default("{}") @map("aturan_potongan")
+  tingkatBonus      Json     @default("[]") @map("tingkat_bonus")
+  diubahPada        DateTime @updatedAt @map("diubah_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+
+  @@map("pengaturan_perusahaan")
+}
+
+model Karyawan {
+  id            String   @id @default(uuid()) @db.Uuid
+  perusahaanId  String   @map("perusahaan_id") @db.Uuid
+  namaLengkap   String   @map("nama_lengkap") @db.VarChar(150)
+  // Bentuk huruf kecil dengan spasi dirapikan, dipakai untuk pencocokan dan keunikan.
+  namaKunci     String   @map("nama_kunci") @db.VarChar(150)
+  jabatan       String   @db.VarChar(100)
+  cabang        String   @db.VarChar(100)
+  gajiPokok     Int      @map("gaji_pokok")
+  tunjangan     Int      @default(0)
+  nomorRekening String   @map("nomor_rekening") @db.VarChar(20)
+  statusAktif   Boolean  @default(true) @map("status_aktif")
+  dibuatPada    DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+  diubahPada    DateTime @updatedAt @map("diubah_pada") @db.Timestamptz(3)
+
+  perusahaan      Perusahaan        @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  alias           KaryawanAlias[]
+  absensi         Absensi[]
+  pendapatanSales PendapatanSales[]
+  insentif        Insentif[]
+  denda           Denda[]
+  potonganLain    PotonganLain[]
+  hasilGaji       HasilGaji[]
+
+  @@unique([perusahaanId, namaKunci, nomorRekening], map: "karyawan_nama_rekening_unik")
+  @@index([perusahaanId, cabang])
+  @@index([nomorRekening, namaKunci])
+  @@map("karyawan")
+}
+
+// Pemetaan manual nama dari mesin finger ke karyawan, diingat untuk periode berikutnya.
+model KaryawanAlias {
+  id           String   @id @default(uuid()) @db.Uuid
+  perusahaanId String   @map("perusahaan_id") @db.Uuid
+  karyawanId   String   @map("karyawan_id") @db.Uuid
+  aliasKunci   String   @map("alias_kunci") @db.VarChar(150)
+  dibuatPada   DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: Cascade)
+
+  @@unique([perusahaanId, aliasKunci])
+  @@index([karyawanId])
+  @@map("karyawan_alias")
+}
+
+model Periode {
+  id             String        @id @default(uuid()) @db.Uuid
+  perusahaanId   String        @map("perusahaan_id") @db.Uuid
+  tanggalAwal    DateTime      @map("tanggal_awal") @db.Date
+  tanggalAkhir   DateTime      @map("tanggal_akhir") @db.Date
+  status         StatusPeriode @default(DRAF)
+  difinalkanPada DateTime?     @map("difinalkan_pada") @db.Timestamptz(3)
+  dibuatPada     DateTime      @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  perusahaan       Perusahaan         @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  absensi          Absensi[]
+  pendapatanCabang PendapatanCabang[]
+  pendapatanSales  PendapatanSales[]
+  insentif         Insentif[]
+  potonganDenda    PotonganDenda[]
+  potonganLain     PotonganLain[]
+  hasilGaji        HasilGaji[]
+
+  @@unique([perusahaanId, tanggalAwal])
+  @@map("periode")
+}
+
+model Absensi {
+  id           String        @id @default(uuid()) @db.Uuid
+  perusahaanId String        @map("perusahaan_id") @db.Uuid
+  periodeId    String        @map("periode_id") @db.Uuid
+  karyawanId   String        @map("karyawan_id") @db.Uuid
+  tanggal      DateTime      @db.Date
+  jamMasuk     String?       @map("jam_masuk") @db.VarChar(5)
+  jamPulang    String?       @map("jam_pulang") @db.VarChar(5)
+  status       StatusAbsensi
+  keterangan   String?       @db.VarChar(255)
+  sumber       SumberAbsensi @default(MANUAL)
+  diubahPada   DateTime      @updatedAt @map("diubah_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+
+  @@unique([periodeId, karyawanId, tanggal])
+  @@index([perusahaanId, periodeId])
+  @@map("absensi")
+}
+
+model PendapatanCabang {
+  id            String   @id @default(uuid()) @db.Uuid
+  perusahaanId  String   @map("perusahaan_id") @db.Uuid
+  periodeId     String   @map("periode_id") @db.Uuid
+  cabang        String   @db.VarChar(100)
+  totalAktual   BigInt   @map("total_aktual")
+  // Selisih breakdown sales boleh dilanjutkan setelah HRD mengakuinya.
+  selisihDiakui Boolean  @default(false) @map("selisih_diakui")
+  diubahPada    DateTime @updatedAt @map("diubah_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+
+  @@unique([periodeId, cabang])
+  @@map("pendapatan_cabang")
+}
+
+model PendapatanSales {
+  id            String   @id @default(uuid()) @db.Uuid
+  perusahaanId  String   @map("perusahaan_id") @db.Uuid
+  periodeId     String   @map("periode_id") @db.Uuid
+  karyawanId    String   @map("karyawan_id") @db.Uuid
+  cabang        String   @db.VarChar(100)
+  nominal       BigInt   @default(0)
+  target        BigInt   @default(0)
+  persenCapaian Decimal? @map("persen_capaian") @db.Decimal(9, 1)
+  diubahPada    DateTime @updatedAt @map("diubah_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+
+  @@unique([periodeId, karyawanId])
+  @@index([periodeId, cabang])
+  @@map("pendapatan_sales")
+}
+
+model Insentif {
+  id           String @id @default(uuid()) @db.Uuid
+  perusahaanId String @map("perusahaan_id") @db.Uuid
+  periodeId    String @map("periode_id") @db.Uuid
+  karyawanId   String @map("karyawan_id") @db.Uuid
+  jenis        String @db.VarChar(100)
+  nominal      Int
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+
+  @@index([periodeId, karyawanId])
+  @@map("insentif")
+}
+
+model Denda {
+  id            String   @id @default(uuid()) @db.Uuid
+  perusahaanId  String   @map("perusahaan_id") @db.Uuid
+  karyawanId    String   @map("karyawan_id") @db.Uuid
+  alasan        String   @db.VarChar(255)
+  total         Int
+  jumlahCicilan Int      @map("jumlah_cicilan")
+  sisa          Int
+  tanggalMulai  DateTime @map("tanggal_mulai") @db.Date
+  dibuatPada    DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  perusahaan    Perusahaan      @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  karyawan      Karyawan        @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+  potonganDenda PotonganDenda[]
+
+  @@index([perusahaanId, karyawanId])
+  @@map("denda")
+}
+
+// Dibuat hanya saat periode difinalkan. Jumlahnya menentukan sisa denda.
+model PotonganDenda {
+  id           String @id @default(uuid()) @db.Uuid
+  perusahaanId String @map("perusahaan_id") @db.Uuid
+  dendaId      String @map("denda_id") @db.Uuid
+  periodeId    String @map("periode_id") @db.Uuid
+  nominal      Int
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  denda      Denda      @relation(fields: [dendaId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+
+  @@unique([dendaId, periodeId])
+  @@index([periodeId])
+  @@map("potongan_denda")
+}
+
+model PotonganLain {
+  id           String            @id @default(uuid()) @db.Uuid
+  perusahaanId String            @map("perusahaan_id") @db.Uuid
+  periodeId    String            @map("periode_id") @db.Uuid
+  karyawanId   String            @map("karyawan_id") @db.Uuid
+  jenis        JenisPotonganLain
+  nominal      Int
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+
+  @@unique([periodeId, karyawanId, jenis])
+  @@map("potongan_lain")
+}
+
+model HasilGaji {
+  id           String   @id @default(uuid()) @db.Uuid
+  perusahaanId String   @map("perusahaan_id") @db.Uuid
+  periodeId    String   @map("periode_id") @db.Uuid
+  karyawanId   String   @map("karyawan_id") @db.Uuid
+  // Salinan lengkap rincian saat difinalkan, tidak berubah walau profil karyawan diedit.
+  rincian      Json
+  totalBersih  Int      @map("total_bersih")
+  dibuatPada   DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  perusahaan Perusahaan @relation(fields: [perusahaanId], references: [id], onDelete: Cascade)
+  periode    Periode    @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  karyawan   Karyawan   @relation(fields: [karyawanId], references: [id], onDelete: NoAction)
+
+  @@unique([periodeId, karyawanId])
+  @@index([karyawanId])
+  @@map("hasil_gaji")
+}
+
+// Penghitung percobaan gagal pada halaman karyawan. Kunci adalah hash IP dan perangkat.
+model PercobaanPublik {
+  id             String    @id @default(uuid()) @db.Uuid
+  kunci          String    @unique @db.VarChar(64)
+  jumlahGagal    Int       @default(0) @map("jumlah_gagal")
+  jendelaMulai   DateTime  @map("jendela_mulai") @db.Timestamptz(3)
+  diblokirSampai DateTime? @map("diblokir_sampai") @db.Timestamptz(3)
+
+  @@index([diblokirSampai])
+  @@map("percobaan_publik")
+}
+
+// Kejadian yang perlu ditinjau manual, misalnya nama dan rekening cocok di lebih dari satu perusahaan.
+model CatatanTinjauan {
+  id         String   @id @default(uuid()) @db.Uuid
+  jenis      String   @db.VarChar(60)
+  detail     Json
+  dibuatPada DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  @@map("catatan_tinjauan")
+}

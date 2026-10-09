@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: payme-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: payme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Isi POSTGRES_PASSWORD di berkas .env}
+      POSTGRES_DB: payme
+    ports:
+      - "127.0.0.1:${DB_PORT:-5440}:5432"
+    volumes:
+      - payme-data:/var/lib/postgresql/data
+      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payme -d payme"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  payme-data:
