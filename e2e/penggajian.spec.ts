@@ -39,7 +39,13 @@ const PENGATURAN = {
   tingkatBonus: [{ ambangPermil: 1000, jenis: "tetap", nilai: 500_000 }],
 };
 
-test("alur lengkap penggajian: dari pendaftaran sampai karyawan melihat gajinya", async ({ page, browser }) => {
+// Cookie sesi dan cookie perangkat bertanda Secure pada mode produksi. WebKit menolak cookie Secure di luar HTTPS,
+// termasuk di localhost, sehingga alur yang bergantung pada cookie hanya diuji di Chromium dan Firefox.
+// Di WebKit tetap berjalan pemeriksaan tampilan dan validasi yang tidak memakai cookie.
+const ALASAN_WEBKIT = "WebKit menolak cookie Secure pada http://localhost. Alur ini diuji di Chromium dan Firefox, dan perlu dicoba manual di HTTPS (staging) untuk Safari.";
+
+test("alur lengkap penggajian: dari pendaftaran sampai karyawan melihat gajinya", async ({ page, browser, browserName }) => {
+  test.skip(browserName === "webkit", ALASAN_WEBKIT);
   test.setTimeout(240_000);
   const galatHalaman: string[] = [];
   page.on("pageerror", (galat) => galatHalaman.push(galat.message));
@@ -156,6 +162,17 @@ test("alur lengkap penggajian: dari pendaftaran sampai karyawan melihat gajinya"
     await page.getByRole("button", { name: /Tambah baris untuk Budi Santoso/ }).click();
     await page.getByLabel("Jenis insentif Budi Santoso baris 2").fill("Lembur");
     await page.getByLabel("Nominal insentif Budi Santoso baris 2").fill("150000");
+
+    // Pindah langkah dengan isian belum tersimpan memunculkan peringatan; membatalkan menahan pengguna di halaman ini.
+    let pertanyaan = "";
+    page.once("dialog", (dialog) => {
+      pertanyaan = dialog.message();
+      void dialog.dismiss();
+    });
+    await page.getByRole("link", { name: /Lanjut: Denda/ }).click();
+    expect(pertanyaan).toContain("belum disimpan");
+    await expect(page).toHaveURL(/\/insentif$/);
+
     await page.getByRole("button", { name: "Simpan insentif" }).click();
     await expect(page.getByText("2 baris insentif tersimpan")).toBeVisible();
   });
@@ -282,10 +299,22 @@ test("tanpa sesi, halaman admin diarahkan ke halaman masuk dan login salah ditol
   await expect(page.getByText("Email atau kata sandi tidak sesuai")).toBeVisible();
 });
 
-test("halaman karyawan memblokir setelah lima kali gagal berturut-turut", async ({ page }) => {
+test("halaman karyawan tampil dan memindahkan fokus ke kolom yang kosong", async ({ page }) => {
   await page.goto("/lihat-gaji");
+  await expect(page.getByRole("heading", { name: "Lihat Gaji Saya", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "Lihat Gaji Saya" }).click();
+  await expect(page.getByLabel("Nama lengkap")).toBeFocused();
+  await expect(page.getByText("Isi nama lengkap Anda, sesuai data di perusahaan.")).toBeVisible();
+  await expect(page.getByText("Isi nomor rekening Anda.")).toBeVisible();
+});
+
+test("halaman karyawan memblokir setelah lima kali gagal berturut-turut", async ({ page, browserName }) => {
+  test.skip(browserName === "webkit", ALASAN_WEBKIT);
+  await page.goto("/lihat-gaji");
+  // Pembatas per nama bertahan di database selama satu jam, jadi nama dibuat unik agar tes tidak saling memengaruhi.
+  const namaTidakAda = `Nama Tidak Ada ${Date.now()}`;
   const kirim = async () => {
-    await page.getByLabel("Nama lengkap").fill("Nama Yang Tidak Ada");
+    await page.getByLabel("Nama lengkap").fill(namaTidakAda);
     await page.getByLabel("Nomor rekening").fill("9999999999");
     await page.getByRole("button", { name: "Lihat Gaji Saya" }).click();
   };

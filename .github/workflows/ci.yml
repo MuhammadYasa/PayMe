@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  uji:
+    name: Typecheck, lint, tes unit dan integrasi, tes E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: payme
+          POSTGRES_PASSWORD: payme-ci
+          POSTGRES_DB: payme
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U payme -d payme"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    env:
+      # Nilai khusus CI untuk database sekali pakai di dalam job ini. Bukan rahasia.
+      DATABASE_URL: postgresql://payme:payme-ci@localhost:5432/payme?schema=public
+      TEST_DATABASE_URL: postgresql://payme:payme-ci@localhost:5432/payme_test?schema=public
+      APP_SECRET: kunci-acak-khusus-ci-minimal-32-karakter
+      TRUST_PROXY: "false"
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Pasang dependensi
+        run: npm ci
+
+      - name: Buat database uji
+        run: PGPASSWORD=payme-ci psql -h localhost -U payme -d postgres -c "CREATE DATABASE payme_test OWNER payme"
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tes unit dan integrasi
+        run: npm test
+
+      - name: Pasang browser untuk tes E2E
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Tes E2E
+        run: npm run test:e2e
+
+      - name: Simpan hasil E2E bila gagal
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil-e2e
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

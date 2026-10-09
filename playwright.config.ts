@@ -31,6 +31,15 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
     },
+    // NFR-06: alur utama juga harus berjalan di Firefox dan Safari (WebKit).
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"], viewport: { width: 1280, height: 800 } },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"], viewport: { width: 1280, height: 800 } },
+    },
   ],
   webServer: {
     command: `npx next start -p ${port}`,
