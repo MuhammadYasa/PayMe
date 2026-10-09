@@ -20,6 +20,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://localhost:${port}`,
+    actionTimeout: 15_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     locale: "id-ID",

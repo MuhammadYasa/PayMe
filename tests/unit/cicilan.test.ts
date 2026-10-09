@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { jadwalCicilan, nominalCicilanBerikut, statusDenda } from "@/domain/cicilan";
+import { jadwalCicilan, nominalCicilanBerikut, ringkasJadwal, statusDenda } from "@/domain/cicilan";
+
+describe("ringkasJadwal", () => {
+  it("menyebut cicilan sama rata sekali saja", () => {
+    expect(ringkasJadwal(jadwalCicilan(900_000, 3))).toBe("3 kali Rp 300.000");
+  });
+
+  it("menyebut cicilan terakhir yang menampung sisa pembulatan", () => {
+    expect(ringkasJadwal(jadwalCicilan(1_000_000, 3))).toBe("2 kali Rp 333.333, lalu Rp 333.334");
+  });
+
+  it("satu cicilan dan jadwal kosong", () => {
+    expect(ringkasJadwal([100_000])).toBe("1 kali Rp 100.000");
+    expect(ringkasJadwal([])).toBe("-");
+  });
+});
 
 describe("jadwalCicilan (FR-14)", () => {
   it("Rp 1.000.000 dalam 3 cicilan: sisa pembulatan masuk cicilan terakhir", () => {

@@ -167,6 +167,76 @@ export function KolomNominal({ label, galat, bantuan, wajib, className, nilai, o
   );
 }
 
+function bacaDigit(teks: string): number | null {
+  const digit = teks.replace(/\D/g, "").slice(0, 15);
+  return digit === "" ? null : Number(digit);
+}
+
+/** Isian rupiah untuk sel tabel. Labelnya hanya untuk pembaca layar karena judul kolom sudah terlihat. */
+export function SelNominal({
+  label,
+  nilai,
+  onUbah,
+  name,
+  disabled,
+  bermasalah,
+}: {
+  label: string;
+  nilai: number | null;
+  onUbah: (nilai: number | null) => void;
+  name?: string;
+  disabled?: boolean;
+  bermasalah?: boolean;
+}) {
+  return (
+    <input
+      aria-label={label}
+      aria-invalid={bermasalah ? true : undefined}
+      name={name}
+      disabled={disabled}
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="0"
+      value={nilai === null ? "" : formatAngka(nilai)}
+      onChange={(e) => onUbah(bacaDigit(e.target.value))}
+      className={`${gayaDasar} min-w-36 text-right tabular-nums`}
+    />
+  );
+}
+
+/** Isian teks pendek untuk sel tabel, dengan label khusus pembaca layar. */
+export function SelTeks({
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+  disabled,
+  name,
+}: {
+  label: string;
+  value: string;
+  onChange: (nilai: string) => void;
+  placeholder?: string;
+  maxLength?: number;
+  disabled?: boolean;
+  name?: string;
+}) {
+  return (
+    <input
+      aria-label={label}
+      name={name}
+      value={value}
+      disabled={disabled}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      autoComplete="off"
+      onChange={(e) => onChange(e.target.value)}
+      className={`${gayaDasar} min-w-40`}
+    />
+  );
+}
+
 export function KotakCentang({
   label,
   className = "",

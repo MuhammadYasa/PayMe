@@ -1,4 +1,5 @@
 import { MAKS_CICILAN } from "./batas";
+import { formatRupiah } from "./uang";
 
 function pastikanDendaValid(total: number, jumlahCicilan: number): void {
   if (!Number.isSafeInteger(total) || total <= 0) throw new RangeError("Total denda harus lebih dari 0.");
@@ -18,6 +19,19 @@ export function jadwalCicilan(total: number, jumlahCicilan: number): number[] {
   const jadwal = new Array<number>(jumlahCicilan).fill(standar);
   jadwal[jumlahCicilan - 1] = total - standar * (jumlahCicilan - 1);
   return jadwal;
+}
+
+/**
+ * Ringkasan jadwal untuk layar: "3 kali Rp 333.333" bila sama rata, atau "2 kali Rp 333.333, lalu Rp 333.334"
+ * bila cicilan terakhir menampung sisa pembulatan.
+ */
+export function ringkasJadwal(jadwal: readonly number[]): string {
+  if (jadwal.length === 0) return "-";
+  const terakhir = jadwal[jadwal.length - 1];
+  const awal = jadwal.slice(0, -1);
+  if (awal.length === 0) return `1 kali ${formatRupiah(terakhir)}`;
+  if (terakhir === awal[0]) return `${jadwal.length} kali ${formatRupiah(terakhir)}`;
+  return `${awal.length} kali ${formatRupiah(awal[0])}, lalu ${formatRupiah(terakhir)}`;
 }
 
 /**
