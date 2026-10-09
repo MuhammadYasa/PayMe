@@ -12,6 +12,7 @@ import { Tombol, TombolTautan } from "@/components/ui/tombol";
 import type { Pengaturan } from "@/domain/pengaturan";
 import { hitungBonusTarget, persenCapaianPermil } from "@/domain/target";
 import { formatPersenPermil, formatRupiah } from "@/domain/uang";
+import { useCegahKehilangan } from "@/hooks/use-cegah-kehilangan";
 import { useData } from "@/hooks/use-data";
 import { GalatApi, api } from "@/lib/api";
 import { fokusKolomPertama } from "@/lib/fokus";
@@ -133,6 +134,7 @@ function KartuCabang({ periodeId, data, tingkat, final, onTersimpan }: PropKartu
   const selisih = isian.total === null ? 0 : isian.total - jumlahBreakdown;
   const perluAkui = isian.sales.length > 0 && isian.total !== null && selisih !== 0;
   const belumTersimpan = JSON.stringify(isian) !== tersimpan;
+  useCegahKehilangan(belumTersimpan);
   const sudahAda = data.adaBreakdown || data.totalAktual > 0;
 
   async function simpan(e: FormEvent) {

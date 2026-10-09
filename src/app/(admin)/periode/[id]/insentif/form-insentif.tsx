@@ -10,6 +10,7 @@ import { MemuatData } from "@/components/ui/spinner";
 import { Baris, KepalaTabel, Tabel, Td, TdAngka, Th } from "@/components/ui/tabel";
 import { Tombol, TombolTautan } from "@/components/ui/tombol";
 import { formatRupiah } from "@/domain/uang";
+import { useCegahKehilangan } from "@/hooks/use-cegah-kehilangan";
 import { useData } from "@/hooks/use-data";
 import { GalatApi, api } from "@/lib/api";
 import type { BarisInsentif, ambilInsentif } from "@/server/services/insentif";
@@ -72,6 +73,7 @@ function TabelInsentif({ periodeId, data, final, onTersimpan }: { periodeId: str
   const [memproses, setMemproses] = useState(false);
 
   const belumTersimpan = potret(peta) !== tersimpan;
+  useCegahKehilangan(belumTersimpan);
 
   function ubah(id: string, kunci: number, perubahan: Partial<EntriIsian>) {
     setKabar(null);

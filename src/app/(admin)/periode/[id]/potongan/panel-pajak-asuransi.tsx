@@ -11,6 +11,7 @@ import { Baris, KepalaTabel, Tabel, Td, TdAngka, Th } from "@/components/ui/tabe
 import { Tombol, TombolTautan } from "@/components/ui/tombol";
 import { labelPeriode } from "@/domain/periode";
 import { formatRupiah } from "@/domain/uang";
+import { useCegahKehilangan } from "@/hooks/use-cegah-kehilangan";
 import { useData } from "@/hooks/use-data";
 import { GalatApi, api } from "@/lib/api";
 import type { PeriodeDto } from "@/server/services/periode";
@@ -59,6 +60,7 @@ function TabelPotongan({ periodeId, karyawan, final, onTersimpan }: { periodeId:
   const [menyalin, setMenyalin] = useState(false);
 
   const belumTersimpan = potret(peta) !== tersimpan;
+  useCegahKehilangan(belumTersimpan);
 
   function ubah(id: string, perubahan: Partial<Nilai>) {
     setKabar(null);
