@@ -86,6 +86,9 @@ gaji bersih = gaji pokok + tunjangan + insentif + bonus target
 - Permintaan yang mengubah data diperiksa asal (Origin). Percobaan masuk dan halaman karyawan dibatasi lewat penghitung atomik di database.
 - Unggahan Excel divalidasi ukuran dan isi arsipnya. Sel ekspor yang diawali `=`, `+`, `-`, atau `@` di-escape agar tidak dijalankan sebagai rumus.
 - Nomor rekening disamarkan di log dan di halaman publik. Halaman dan API yang memuat data gaji tidak boleh disimpan cache browser.
+- Pendaftaran akun dan halaman karyawan dibatasi per perangkat, per IP (hanya bila `TRUST_PROXY=true`), dan secara menyeluruh atau per nama. Penyerang yang membuang cookie perangkat di tiap permintaan hanya tertahan oleh batas per nama dan batas IP, jadi aktifkan `TRUST_PROXY` di belakang proxy tepercaya. Baris pembatas yang sudah kedaluwarsa dibersihkan otomatis saat server hidup dan setiap enam jam.
+- Halaman karyawan hanya memakai nama lengkap dan nomor rekening sebagai faktor. Faktor tambahan (PIN atau tanggal lahir) belum diaktifkan karena belum menjadi kebutuhan di PRD, tetapi titik pemasangannya sudah disiapkan di `src/server/services/publik.ts`.
+- Unggahan Excel dikembangkan dengan batas keras 64 MB di memori, sehingga ukuran terurai yang dipalsukan di header tidak berguna.
 - Tidak ada rahasia di kode. Semua dibaca dari variabel lingkungan.
 
 ## Konfigurasi
@@ -107,7 +110,7 @@ Hosting belum ditetapkan di dokumen rencana. Langkah di bawah berlaku untuk host
 ### Persiapan satu kali
 
 1. Siapkan PostgreSQL 15 atau lebih baru, satu database dan satu pengguna khusus aplikasi. Bila penyedia mewajibkan TLS, tambahkan `sslmode=require` pada `DATABASE_URL`.
-2. Isi variabel lingkungan pada penyedia hosting: `DATABASE_URL`, `APP_SECRET` (nilai baru, jangan sama dengan lokal), dan `TRUST_PROXY=true` bila ada proxy atau CDN tepercaya di depan aplikasi.
+2. Isi variabel lingkungan pada penyedia hosting: `DATABASE_URL`, `APP_SECRET` (nilai baru, jangan sama dengan lokal), dan `TRUST_PROXY=true` bila ada proxy atau CDN tepercaya di depan aplikasi. Tanpa itu pembatas per IP tidak aktif, dan perlindungan pendaftaran serta halaman karyawan hanya bertumpu pada cookie perangkat dan batas per nama.
 3. Pasang sertifikat HTTPS di hosting atau proxy. Aplikasi mengirim header `Strict-Transport-Security` pada mode produksi, jadi pastikan HTTPS sudah aktif sebelum membuka alamat ke pengguna.
 4. Jadwalkan cadangan harian (bagian di bawah).
 
