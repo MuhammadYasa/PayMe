@@ -43,6 +43,10 @@ yarn-error.log*
 /blob-report/
 /.playwright/
 
+# cadangan database (berisi data gaji dan nomor rekening), jangan pernah di-commit
+/backup/
+*.dump
+
 # data absensi asli (berisi nama karyawan), jangan pernah di-commit
 /absenall4yani.xlsx
 /*.local.xlsx

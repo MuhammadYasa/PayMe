@@ -86,6 +86,31 @@ export function aturanBatasMasuk(email: string, ip: string | null): AturanBatas[
   return aturan;
 }
 
+/**
+ * Batas pendaftaran akun: per perangkat, per IP bila IP tepercaya diketahui, dan satu batas menyeluruh. Pendaftaran
+ * menjalankan hash kata sandi yang mahal dan menulis baris baru, jadi tanpa batas satu skrip bisa menghabiskan CPU,
+ * memori, dan isi database. Batas menyeluruh melindungi dari penyerang yang membuang cookie perangkat di tiap permintaan.
+ */
+export function aturanBatasDaftar(perangkat: string, ip: string | null): AturanBatas[] {
+  const aturan: AturanBatas[] = [
+    { kunci: hmacHex(`daftar:perangkat:${perangkat}`), batas: 5, jendelaMenit: 60, blokirMenit: 60 },
+    { kunci: hmacHex("daftar:semua"), batas: 200, jendelaMenit: 60, blokirMenit: 15 },
+  ];
+  if (ip) aturan.push({ kunci: hmacHex(`daftar:ip:${ip}`), batas: 10, jendelaMenit: 60, blokirMenit: 60 });
+  return aturan;
+}
+
+/** Mengambil jatah pendaftaran sebelum pekerjaan mahal dimulai. Melempar 429 bila jatah habis. */
+export async function batasiPendaftaran(perangkat: string, ip: string | null, sekarang: Date = new Date()): Promise<void> {
+  const jatah = await ambilJatahSemua(aturanBatasDaftar(perangkat, ip), sekarang);
+  if (!jatah.diizinkan) {
+    throw terlaluBanyakPercobaan(
+      `Terlalu banyak percobaan mendaftar. Coba lagi dalam ${Math.max(1, Math.ceil(jatah.sisaDetik / 60))} menit, atau masuk bila Anda sudah punya akun.`,
+      jatah.sisaDetik,
+    );
+  }
+}
+
 export async function masuk(input: {
   email: string;
   kataSandi: string;

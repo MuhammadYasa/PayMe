@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
-import { type AturanBatas, ambilJatah, ambilJatahSemua, resetJatah } from "@/server/pembatas";
+import { prisma } from "@/server/db/client";
+import { type AturanBatas, ambilJatah, ambilJatahSemua, bersihkanKedaluwarsa, resetJatah } from "@/server/pembatas";
+import { aturanBatasDaftar, batasiPendaftaran } from "@/server/services/auth";
 import { hapusKunciPembatas } from "../support/db";
 
 const kunciDipakai: string[] = [];
@@ -15,6 +17,62 @@ const menit = (n: number) => n * 60_000;
 
 afterAll(async () => {
   await hapusKunciPembatas(kunciDipakai);
+});
+
+describe("pembersihan baris kedaluwarsa", () => {
+  it("hanya menghapus baris lama yang tidak sedang memblokir", async () => {
+    // Waktu palsu jauh di masa lalu, supaya hanya baris milik tes ini yang memenuhi syarat, bukan data tes lain.
+    const lama = new Date("2019-12-25T10:00:00Z");
+    const sekarang = new Date("2020-01-02T10:00:00Z");
+    const usang = aturanBaru();
+    const masihDiblokir = aturanBaru({ batas: 1, blokirMenit: 60 * 24 * 30 });
+    const segar = aturanBaru();
+
+    await ambilJatah(usang, lama);
+    await ambilJatah(masihDiblokir, lama);
+    await ambilJatah(masihDiblokir, new Date(lama.getTime() + 1000));
+    await ambilJatah(segar, new Date("2020-01-02T09:00:00Z"));
+
+    expect(await bersihkanKedaluwarsa(sekarang)).toBeGreaterThanOrEqual(1);
+
+    const sisa = await prisma().percobaanPublik.findMany({ where: { kunci: { in: [usang.kunci, masihDiblokir.kunci, segar.kunci] } } });
+    expect(sisa.map((b) => b.kunci).sort()).toEqual([masihDiblokir.kunci, segar.kunci].sort());
+  });
+});
+
+describe("batas pendaftaran akun", () => {
+  it("lima pendaftaran dari satu perangkat lolos dan yang keenam ditolak dengan pesan yang menyebut menit", async () => {
+    const perangkat = `uji-${randomUUID()}`;
+    kunciDipakai.push(...aturanBatasDaftar(perangkat, null).map((a) => a.kunci));
+    const t0 = new Date("2026-01-01T10:00:00Z");
+    for (let i = 1; i <= 5; i++) {
+      await expect(batasiPendaftaran(perangkat, null, new Date(t0.getTime() + i * 1000))).resolves.toBeUndefined();
+    }
+    const galat = await batasiPendaftaran(perangkat, null, new Date(t0.getTime() + 6000)).catch((e: unknown) => e as { status: number; message: string });
+    expect(galat).toMatchObject({ status: 429 });
+    expect((galat as { message: string }).message).toMatch(/Coba lagi dalam \d+ menit/);
+  });
+
+  it("perangkat lain tidak ikut terblokir", async () => {
+    const a = `uji-${randomUUID()}`;
+    const b = `uji-${randomUUID()}`;
+    kunciDipakai.push(...aturanBatasDaftar(a, null).map((x) => x.kunci), ...aturanBatasDaftar(b, null).map((x) => x.kunci));
+    const t0 = new Date("2026-01-01T10:00:00Z");
+    for (let i = 1; i <= 6; i++) await batasiPendaftaran(a, null, new Date(t0.getTime() + i * 1000)).catch(() => undefined);
+    await expect(batasiPendaftaran(b, null, new Date(t0.getTime() + 7000))).resolves.toBeUndefined();
+  });
+
+  it("IP tepercaya yang sama tetap dibatasi walau perangkat terus berganti", async () => {
+    const ip = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
+    const perangkat = Array.from({ length: 12 }, () => `uji-${randomUUID()}`);
+    for (const p of perangkat) kunciDipakai.push(...aturanBatasDaftar(p, ip).map((x) => x.kunci));
+    const t0 = new Date("2026-01-01T10:00:00Z");
+    let ditolak = 0;
+    for (const [i, p] of perangkat.entries()) {
+      await batasiPendaftaran(p, ip, new Date(t0.getTime() + i * 1000)).catch(() => ditolak++);
+    }
+    expect(ditolak).toBe(2);
+  });
 });
 
 describe("pembatas percobaan (FR-19)", () => {

@@ -73,6 +73,21 @@ export async function ambilJatahSemua(aturan: readonly AturanBatas[], sekarang: 
   };
 }
 
+const SIMPAN_SETELAH_JENDELA_MS = 24 * 60 * MENIT;
+
+/**
+ * Menghapus baris yang sudah tidak berpengaruh: jendelanya berakhir lebih dari sehari lalu dan blokirnya (bila ada)
+ * sudah selesai. Tanpa ini, setiap email atau nama acak yang pernah dicoba meninggalkan satu baris selamanya, sebab
+ * baris hanya dihapus saat percobaan berhasil.
+ */
+export async function bersihkanKedaluwarsa(sekarang: Date = new Date()): Promise<number> {
+  const batasJendela = new Date(sekarang.getTime() - SIMPAN_SETELAH_JENDELA_MS);
+  const hasil = await prisma().percobaanPublik.deleteMany({
+    where: { jendelaMulai: { lt: batasJendela }, OR: [{ diblokirSampai: null }, { diblokirSampai: { lt: sekarang } }] },
+  });
+  return hasil.count;
+}
+
 /** Dipanggil setelah percobaan berhasil, sehingga hitungannya benar-benar "gagal berturut-turut". */
 export async function resetJatah(kunci: readonly string[]): Promise<void> {
   if (kunci.length === 0) return;

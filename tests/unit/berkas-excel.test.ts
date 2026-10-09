@@ -1,3 +1,4 @@
+import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { periksaIsiXlsx, periksaNamaDanUkuran } from "@/server/excel/berkas";
 import { AppError } from "@/server/errors";
@@ -72,6 +73,50 @@ describe("periksaIsiXlsx", () => {
     eocd.writeUInt32LE(30, 16);
     const galat = galatDari(() => periksaIsiXlsx(Buffer.concat([lfh, cdh, eocd])));
     expect(galat.kode).toBe("FILE_TERLALU_BESAR");
+  });
+
+  /** ZIP satu entri deflate dengan ukuran terurai yang sengaja ditulis salah di direktori pusat. */
+  function zipDenganUkuranPalsu(termampat: Buffer, ukuranDiklaim: number): Buffer {
+    const nama = Buffer.from("xl/media/x.png");
+    const lfh = Buffer.alloc(30);
+    lfh.writeUInt32LE(0x04034b50, 0);
+    lfh.writeUInt16LE(8, 8);
+    lfh.writeUInt32LE(termampat.length, 18);
+    lfh.writeUInt32LE(ukuranDiklaim, 22);
+    lfh.writeUInt16LE(nama.length, 26);
+    const cdh = Buffer.alloc(46);
+    cdh.writeUInt32LE(0x02014b50, 0);
+    cdh.writeUInt16LE(8, 10);
+    cdh.writeUInt32LE(termampat.length, 20);
+    cdh.writeUInt32LE(ukuranDiklaim, 24);
+    cdh.writeUInt16LE(nama.length, 28);
+    cdh.writeUInt32LE(0, 42);
+    const awalDirektori = lfh.length + nama.length + termampat.length;
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(1, 8);
+    eocd.writeUInt16LE(1, 10);
+    eocd.writeUInt32LE(cdh.length + nama.length, 12);
+    eocd.writeUInt32LE(awalDirektori, 16);
+    return Buffer.concat([lfh, nama, termampat, cdh, nama, eocd]);
+  }
+
+  it("menolak zip bomb yang memalsukan ukuran terurai di header", () => {
+    // 80 MB nol hanya termampat menjadi puluhan KB. Header mengaku 177 byte, sehingga pemeriksaan header saja lolos.
+    const termampat = deflateRawSync(Buffer.alloc(80 * 1024 * 1024));
+    expect(termampat.length).toBeLessThan(1024 * 1024);
+    const galat = galatDari(() => periksaIsiXlsx(zipDenganUkuranPalsu(termampat, 177)));
+    expect(galat.kode).toBe("FILE_TERLALU_BESAR");
+  });
+
+  it("menerima entri kecil yang ukurannya jujur", () => {
+    const termampat = deflateRawSync(Buffer.from("<xml>isi kecil</xml>"));
+    expect(() => periksaIsiXlsx(zipDenganUkuranPalsu(termampat, 20))).not.toThrow();
+  });
+
+  it("menolak data termampat yang rusak walau direktorinya tampak wajar", () => {
+    const rusak = Buffer.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+    expect(galatDari(() => periksaIsiXlsx(zipDenganUkuranPalsu(rusak, 100))).kode).toBe("FILE_RUSAK");
   });
 
   it("menolak ZIP dengan terlalu banyak entri", () => {
