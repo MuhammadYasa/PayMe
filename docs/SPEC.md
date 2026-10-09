@@ -1,4 +1,4 @@
-# Spec Fitur · PayMe
+# Spec Fitur - PayMe
 
 ## Konvensi
 
@@ -10,7 +10,7 @@
 
 ## Fitur
 
-### FR-01 · Registrasi, login, dan logout akun HRD/pemilik usaha
+### FR-01 - Registrasi, login, dan logout akun HRD/pemilik usaha
 
 **Deskripsi:** Pemilik usaha atau HRD membuat akun, masuk, dan keluar. Akun terikat ke satu perusahaan.
 
@@ -36,7 +36,7 @@
 
 **Data terkait:** Akun, Perusahaan.
 
-### FR-02 · CRUD profil karyawan
+### FR-02 - CRUD profil karyawan
 
 **Deskripsi:** HRD menambah, mengubah, melihat, dan menghapus profil karyawan yang menjadi dasar perhitungan.
 
@@ -62,7 +62,7 @@
 
 **Data terkait:** Karyawan.
 
-### FR-03 · Pemilihan tanggal awal periode gaji
+### FR-03 - Pemilihan tanggal awal periode gaji
 
 **Deskripsi:** HRD memilih tanggal awal; sistem membentuk periode satu bulan kalender dari tanggal itu.
 
@@ -85,7 +85,7 @@
 
 **Data terkait:** Periode.
 
-### FR-04 · Unggah file Excel mesin finger dan parsing
+### FR-04 - Unggah file Excel mesin finger dan parsing
 
 **Deskripsi:** HRD mengunggah .xlsx hasil mesin finger; sistem membaca absensi per karyawan per tanggal.
 
@@ -111,7 +111,7 @@
 
 **Data terkait:** Absensi, Karyawan, Periode.
 
-### FR-05 · Tampilan absensi per karyawan dengan penanda tanggal kosong
+### FR-05 - Tampilan absensi per karyawan dengan penanda tanggal kosong
 
 **Deskripsi:** Menampilkan kalender/tabel absensi per karyawan sepanjang periode dan menandai tanggal tanpa data agar HRD mengisinya.
 
@@ -135,12 +135,12 @@
 
 **Data terkait:** Absensi, Karyawan, Periode.
 
-### FR-06 · Penghitungan hari kerja
+### FR-06 - Penghitungan hari kerja
 
 **Deskripsi:** Menghitung jumlah hari kerja efektif per karyawan dalam periode.
 
 **Aturan bisnis:**
-- Hari kerja = hari dalam periode − hari libur (FR-07), dengan hari libur mencakup hari mingguan yang dikonfigurasi dan tanggal merah yang ditandai HRD. Hari kerja minggu default Senin–Sabtu **[Asumsi]**, dapat dikonfigurasi.
+- Hari kerja = hari dalam periode − hari libur (FR-07), dengan hari libur mencakup hari mingguan yang dikonfigurasi dan tanggal merah yang ditandai HRD. Hari kerja minggu default Senin-Sabtu **[Asumsi]**, dapat dikonfigurasi.
 - Hari hadir = hari kerja dengan status hadir. Izin, sakit, cuti, dan lainnya tetap dihitung terpisah dan tidak masuk hari hadir.
 - Hari tidak hadir tanpa keterangan tidak mungkin ada saat perhitungan karena diblokir FR-05; status "alpa" tidak ada, gunakan "lainnya" dengan keterangan.
 
@@ -149,7 +149,7 @@
 - Dihitung ulang otomatis saat absensi atau penanda libur berubah.
 
 **Kriteria penerimaan:**
-- [ ] Diberikan periode 1–30 April 2025 dengan Minggu libur (4 Minggu), ketika dihitung, maka hari kerja = 26.
+- [ ] Diberikan periode 1-30 April 2025 dengan Minggu libur (4 Minggu), ketika dihitung, maka hari kerja = 26.
 - [ ] Diberikan 20 kasus uji acuan, ketika dibandingkan dengan hitungan manual, maka selisih 0 hari pada semua kasus.
 - [ ] Diberikan karyawan dengan 2 hari sakit, ketika dihitung, maka hari hadir = hari kerja − 2 − (izin + cuti + lainnya).
 - [ ] Diberikan satu tanggal merah ditambahkan, ketika disimpan, maka hari kerja semua karyawan berkurang 1.
@@ -158,7 +158,7 @@
 
 **Data terkait:** Absensi, Periode.
 
-### FR-07 · Pencatatan dan penghitungan jumlah libur
+### FR-07 - Pencatatan dan penghitungan jumlah libur
 
 **Deskripsi:** HRD menandai hari libur dan sistem menghitung total libur per karyawan.
 
@@ -182,7 +182,7 @@
 
 **Data terkait:** Absensi, Periode, Karyawan.
 
-### FR-08 · Pencatatan izin, sakit, dan lainnya
+### FR-08 - Pencatatan izin, sakit, dan lainnya
 
 **Deskripsi:** HRD mencatat ketidakhadiran berjenis izin, sakit, atau lainnya per karyawan.
 
@@ -196,7 +196,7 @@
 - Ringkasan total per jenis per karyawan; daftar entri dapat diubah dan dihapus.
 
 **Kriteria penerimaan:**
-- [ ] Diberikan rentang sakit 10–12 Maret, ketika disimpan, maka terbentuk 3 record berstatus sakit dan total sakit bertambah 3.
+- [ ] Diberikan rentang sakit 10-12 Maret, ketika disimpan, maka terbentuk 3 record berstatus sakit dan total sakit bertambah 3.
 - [ ] Diberikan jenis "lainnya" tanpa keterangan, ketika disimpan, maka ditolak dengan pesan pada field keterangan.
 - [ ] Diberikan tanggal yang sudah punya status, ketika entri baru disimpan, maka sistem menawarkan menimpa dan tidak membuat duplikat.
 - [ ] Diberikan entri dihapus, ketika disimpan, maka total per jenis berkurang dan tanggal kembali kosong.
@@ -205,7 +205,7 @@
 
 **Data terkait:** Absensi.
 
-### FR-09 · Pencatatan dan penghitungan jumlah cuti
+### FR-09 - Pencatatan dan penghitungan jumlah cuti
 
 **Deskripsi:** HRD mencatat cuti dan sistem menghitung total cuti terpakai dalam periode.
 
@@ -228,7 +228,7 @@
 
 **Data terkait:** Absensi.
 
-### FR-10 · Input pendapatan aktual cabang dan breakdown ke sales
+### FR-10 - Input pendapatan aktual cabang dan breakdown ke sales
 
 **Deskripsi:** HRD mengisi pendapatan aktual per cabang dan membaginya ke tiap personil sales.
 
@@ -250,7 +250,7 @@
 
 **Data terkait:** PendapatanCabang, PendapatanSales, Karyawan.
 
-### FR-11 · Penghitungan target per sales dan pencapaiannya
+### FR-11 - Penghitungan target per sales dan pencapaiannya
 
 **Deskripsi:** Menghitung persentase pencapaian target tiap sales dan menentukan bonus target.
 
@@ -272,7 +272,7 @@
 
 **Data terkait:** PendapatanSales, Karyawan.
 
-### FR-12 · Input insentif pengiriman dan penghitungan bonus/insentif
+### FR-12 - Input insentif pengiriman dan penghitungan bonus/insentif
 
 **Deskripsi:** HRD mengisi insentif pengiriman per karyawan; sistem menjumlahkannya bersama bonus target.
 
@@ -294,7 +294,7 @@
 
 **Data terkait:** Insentif, PendapatanSales.
 
-### FR-13 · Pencatatan denda dan potongan gaji
+### FR-13 - Pencatatan denda dan potongan gaji
 
 **Deskripsi:** HRD mencatat denda dengan alasan dan nominal yang dipotong dari gaji.
 
@@ -317,7 +317,7 @@
 
 **Data terkait:** Denda, PotonganDenda, PotonganLain.
 
-### FR-14 · Denda cicilan
+### FR-14 - Denda cicilan
 
 **Deskripsi:** Denda besar dipecah menjadi cicilan dan dipotong otomatis tiap periode sampai lunas.
 
@@ -341,7 +341,7 @@
 
 **Data terkait:** Denda, PotonganDenda, Periode.
 
-### FR-15 · Hitung gaji dan tampilkan rincian sebelum disimpan
+### FR-15 - Hitung gaji dan tampilkan rincian sebelum disimpan
 
 **Deskripsi:** Satu tombol "Hitung Gaji" memproses semua karyawan aktif dan menampilkan rincian yang dapat diperiksa.
 
@@ -365,7 +365,7 @@
 
 **Data terkait:** HasilGaji, semua entitas masukan.
 
-### FR-16 · Simpan hasil penggajian dan riwayat per periode
+### FR-16 - Simpan hasil penggajian dan riwayat per periode
 
 **Deskripsi:** Menyimpan hasil sebagai snapshot dan menampilkan riwayat per bulan.
 
@@ -387,7 +387,7 @@
 
 **Data terkait:** HasilGaji, Periode, PotonganDenda.
 
-### FR-17 · Ekspor hasil penggajian ke Excel
+### FR-17 - Ekspor hasil penggajian ke Excel
 
 **Deskripsi:** HRD mengunduh hasil penggajian sebagai file .xlsx.
 
@@ -408,7 +408,7 @@
 
 **Data terkait:** HasilGaji, Karyawan.
 
-### FR-18 · Potongan pajak dan asuransi sebagai nominal input
+### FR-18 - Potongan pajak dan asuransi sebagai nominal input
 
 **Deskripsi:** HRD mengatur nominal potongan pajak dan asuransi per karyawan; bukan perhitungan PPh.
 
@@ -429,7 +429,7 @@
 
 **Data terkait:** PotonganLain.
 
-### FR-19 · Halaman karyawan
+### FR-19 - Halaman karyawan
 
 **Deskripsi:** Halaman publik tempat karyawan melihat gaji, cuti, dan potongan dengan memasukkan nama lengkap dan nomor rekening.
 
@@ -456,7 +456,7 @@
 
 **Data terkait:** Karyawan, HasilGaji, Absensi.
 
-### FR-20 · Pesan panduan dan validasi Bahasa Indonesia
+### FR-20 - Pesan panduan dan validasi Bahasa Indonesia
 
 **Deskripsi:** Semua langkah memiliki panduan singkat dan pesan error yang jelas dalam Bahasa Indonesia.
 
@@ -465,7 +465,7 @@
 - Alur penggajian ditampilkan sebagai stepper 9 langkah sesuai Alur utama PRD.
 
 **Perilaku:**
-- Stepper menunjukkan langkah aktif, selesai, dan belum; tiap langkah memiliki teks bantuan 1–2 kalimat.
+- Stepper menunjukkan langkah aktif, selesai, dan belum; tiap langkah memiliki teks bantuan 1-2 kalimat.
 - Validasi ditampilkan di samping field yang bermasalah; ringkasan error di atas form bila banyak.
 - Kesalahan server menampilkan pesan ramah dan opsi "Coba lagi".
 

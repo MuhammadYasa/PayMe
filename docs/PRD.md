@@ -1,4 +1,4 @@
-# PRD · PayMe
+# PRD - PayMe
 
 ## Ringkasan
 

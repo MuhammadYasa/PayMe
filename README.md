@@ -62,7 +62,8 @@ Masuk dengan `demo@payme.test`. File contoh format mesin finger tersedia di `con
 
 - **Unit**: seluruh rumus uang, periode, absensi, bonus target, cicilan, dan gaji adalah fungsi murni di `src/domain` dengan tes di `tests/unit`.
 - **Integrasi**: layanan dan route API diuji terhadap PostgreSQL sungguhan di `tests/integration`, termasuk tes otorisasi yang memastikan setiap route menolak permintaan tanpa sesi dan menjawab 404 bagi perusahaan lain.
-- **End-to-end**: `e2e/penggajian.spec.ts` menjalankan alur dari pendaftaran, unggah absensi, pengisian data, hitung, simpan, ekspor, sampai karyawan melihat gajinya. Pasang browser sekali dengan `npx playwright install chromium`. Tangkapan layar tiap langkah penting tersimpan di `test-results/tangkapan`.
+- **End-to-end**: `e2e/penggajian.spec.ts` menjalankan alur dari pendaftaran, unggah absensi, pengisian data, hitung, simpan, ekspor, sampai karyawan melihat gajinya. Pasang browser sekali dengan `npx playwright install chromium firefox webkit`. Alur penuh berjalan di Chromium dan Firefox. Di WebKit (Safari) hanya pemeriksaan tampilan dan validasi yang berjalan, karena WebKit menolak cookie `Secure` pada `http://localhost`; alur penuh di Safari perlu dicoba manual lewat HTTPS. Tangkapan layar tiap langkah penting tersimpan di `test-results/tangkapan`.
+- **CI**: `.github/workflows/ci.yml` menjalankan typecheck, lint, tes unit dan integrasi, lalu E2E dengan PostgreSQL sekali pakai pada setiap push dan pull request ke `main`.
 
 ## Aturan perhitungan
 
