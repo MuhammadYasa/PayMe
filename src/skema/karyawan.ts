@@ -23,7 +23,7 @@ export const nomorRekeningSkema = z
     z
       .string()
       .min(1, { error: "Isi nomor rekening. Salin dari buku tabungan atau slip bank karyawan.", abort: true })
-      .regex(/^\d+$/, { error: "Nomor rekening hanya boleh berisi angka.", abort: true })
+      .regex(/^\d+$/, { error: "Nomor rekening hanya boleh berisi angka. Hapus huruf atau tanda baca, lalu coba lagi.", abort: true })
       .min(6, "Nomor rekening harus 6 sampai 20 digit. Periksa kembali nomor di buku tabungan.")
       .max(20, "Nomor rekening harus 6 sampai 20 digit. Periksa kembali nomor di buku tabungan."),
   );

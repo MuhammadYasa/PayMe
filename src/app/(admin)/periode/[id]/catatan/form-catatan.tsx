@@ -197,6 +197,7 @@ function FormLibur({ periodeId, awal, akhir, karyawan, onSelesai }: PropForm) {
     const k: Record<string, string> = {};
     if (!dari) k.dari = "Pilih tanggal libur. Isi tanggal awal.";
     else if (tanggalSampai < dari) k.sampai = "Tanggal akhir tidak boleh sebelum tanggal awal.";
+    else if (dari < awal || tanggalSampai > akhir) k.dari = `Tanggal libur harus berada di dalam periode, yaitu ${formatTanggal(awal)} sampai ${formatTanggal(akhir)}. Ubah tanggalnya, lalu coba lagi.`;
     if (untuk === "terpilih" && terpilih.length === 0) k.karyawan = "Pilih minimal satu karyawan.";
     setKolom(k);
     if (Object.keys(k).length > 0) {
@@ -278,6 +279,7 @@ function FormKetidakhadiran({ periodeId, awal, akhir, karyawan, onSelesai }: Pro
     if (!isian.dari) k.dari = "Isi tanggal mulai.";
     const sampai = isian.sampai || isian.dari;
     if (isian.dari && sampai < isian.dari) k.sampai = "Tanggal selesai tidak boleh sebelum tanggal mulai.";
+    else if (isian.dari && (isian.dari < awal || sampai > akhir)) k.dari = `Tanggal harus berada di dalam periode, yaitu ${formatTanggal(awal)} sampai ${formatTanggal(akhir)}. Ubah tanggalnya, lalu coba lagi.`;
     if (isian.jenis === "LAINNYA" && !isian.keterangan.trim()) k.keterangan = "Jenis lainnya wajib diberi keterangan. Tulis alasannya.";
     setKolom(k);
     if (Object.keys(k).length > 0) {

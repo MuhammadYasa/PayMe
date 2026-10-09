@@ -34,9 +34,10 @@ describe("validasi karyawan (FR-02)", () => {
     expect(pesanKolom({ ...dasar, gajiPokok: -5 }, "gajiPokok")).toMatch(/lebih dari 0/);
   });
 
-  it('nomor rekening berisi huruf ditolak dengan pesan "Nomor rekening hanya boleh berisi angka."', () => {
-    expect(pesanKolom({ ...dasar, nomorRekening: "12345abc90" }, "nomorRekening")).toBe("Nomor rekening hanya boleh berisi angka.");
-    expect(pesanKolom({ ...dasar, nomorRekening: "1234-5678" }, "nomorRekening")).toBe("Nomor rekening hanya boleh berisi angka.");
+  it("nomor rekening berisi huruf atau tanda baca ditolak dengan pesan yang menyebut langkah perbaikan", () => {
+    const pesan = "Nomor rekening hanya boleh berisi angka. Hapus huruf atau tanda baca, lalu coba lagi.";
+    expect(pesanKolom({ ...dasar, nomorRekening: "12345abc90" }, "nomorRekening")).toBe(pesan);
+    expect(pesanKolom({ ...dasar, nomorRekening: "1234-5678" }, "nomorRekening")).toBe(pesan);
   });
 
   it("nomor rekening harus 6 sampai 20 digit", () => {

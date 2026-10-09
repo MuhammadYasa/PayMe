@@ -2,8 +2,8 @@ import "server-only";
 import { z } from "zod";
 
 const skema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL belum diisi."),
-  APP_SECRET: z.string().min(32, "APP_SECRET minimal 32 karakter."),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL belum diisi. Isi di berkas .env atau pengaturan hosting."),
+  APP_SECRET: z.string().min(32, "APP_SECRET minimal 32 karakter. Buat kunci acak baru dengan perintah di README."),
   TRUST_PROXY: z
     .enum(["true", "false"])
     .default("false")

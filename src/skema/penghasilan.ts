@@ -29,7 +29,7 @@ export const pendapatanCabangSkema = z
           target: nominalPendapatan("target sales"),
         }),
       )
-      .max(500, "Terlalu banyak sales pada satu cabang."),
+      .max(500, "Terlalu banyak sales pada satu cabang. Kurangi menjadi paling banyak 500 baris."),
   })
   .refine((data) => new Set(data.sales.map((s) => s.karyawanId)).size === data.sales.length, {
     path: ["sales"],
@@ -49,7 +49,7 @@ export const simpanInsentifSkema = z.object({
               nominal: nominalGaji("nominal insentif").nullable(),
             }),
           )
-          .max(50, "Terlalu banyak baris insentif untuk satu karyawan."),
+          .max(50, "Terlalu banyak baris insentif untuk satu karyawan. Gabungkan baris yang sejenis, paling banyak 50 baris."),
       }),
     )
     .max(2000),
@@ -71,7 +71,7 @@ export const dendaSkema = z
       .max(MAKS_NOMINAL_GAJI, "Total denda terlalu besar. Periksa jumlah nol yang diketik."),
     jumlahCicilan: z
       .int({ error: "Isi jumlah cicilan dengan angka bulat, misalnya 3." })
-      .min(1, "Jumlah cicilan minimal 1 (dipotong sekali).")
+      .min(1, "Jumlah cicilan minimal 1 (dipotong sekali). Isi 1 atau lebih.")
       .max(MAKS_CICILAN, `Jumlah cicilan paling banyak ${MAKS_CICILAN}. Kurangi jumlah cicilan.`),
     mulai: z.enum(["periode_ini", "periode_berikutnya"], { error: "Pilih mulai dipotong dari periode ini atau periode berikutnya." }),
   })

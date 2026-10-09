@@ -222,7 +222,7 @@ describe("CRUD lewat API dan isolasi antar perusahaan (NFR-09)", () => {
     expect(status).toBe(422);
     const kolom = json.kolom as Record<string, string>;
     expect(kolom.gajiPokok).toMatch(/lebih dari 0/);
-    expect(kolom.nomorRekening).toBe("Nomor rekening hanya boleh berisi angka.");
+    expect(kolom.nomorRekening).toBe("Nomor rekening hanya boleh berisi angka. Hapus huruf atau tanda baca, lalu coba lagi.");
   });
 
   it("karyawan ganda mengembalikan 409 dengan pesan pada kolom terkait", async () => {
